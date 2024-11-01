@@ -28,7 +28,11 @@ def main(args: List[str]) -> int:
     for sram_name in list_of_srams:
         # SRAM22-generated single-port RAMs
         if sram_name.startswith("sram22_"):
+<<<<<<< HEAD
             match = re.match(r"^sram22_(\d+)x(\d+)m(\d+)w(\d+)$", sram_name)
+=======
+            match = re.match(r"sram22_(\d+)x(\d+)m(\d+)w(\d+)(\D*)", sram_name)
+>>>>>>> rohan/stac-tapeout
             if match:
                 width = int(match.group(2))
                 mask_gran = int(match.group(4))
@@ -52,6 +56,9 @@ def main(args: List[str]) -> int:
                 port_dict['clock port name'] = "clk"
                 port_dict['clock port polarity'] = "active high"
 
+                port_dict['write enable port name'] = "ce"
+                port_dict['write enable port polarity'] = "active high" # ???
+
                 port_dict['write enable port name'] = "we"
                 port_dict['write enable port polarity'] = "active high"
 
@@ -61,12 +68,22 @@ def main(args: List[str]) -> int:
                 port_dict['input port name'] = "din"
                 port_dict['input port polarity'] = "active high"
                 
+<<<<<<< HEAD
                 # if mask_gran != width:
+=======
+>>>>>>> rohan/stac-tapeout
                 port_dict['mask port name'] = "wmask"
                 port_dict['mask granularity'] = mask_gran
                 port_dict['mask port polarity'] = "active high"  # ???
                 
                 sram_dict['ports'].append(port_dict.copy())
+
+                sram_dict['extra_ports'] = [{
+                    "name": "rstb",
+                    "width": 1,
+                    "type": "constant",
+                    "value": 1,
+                }]
 
                 sram_dicts.append(sram_dict.copy())
             

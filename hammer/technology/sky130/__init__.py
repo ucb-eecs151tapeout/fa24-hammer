@@ -31,6 +31,20 @@ class SKY130Tech(HammerTechnology):
     Override the HammerTechnology used in `hammer_tech.py`
     This class is loaded by function `load_from_json`, and will pass the `try` in `importlib`.
     """
+<<<<<<< HEAD
+=======
+    def post_install_script(self) -> None:
+        self.library_name = 'sky130_fd_sc_hd'
+        # check whether variables were overriden to point to a valid path
+        self.use_nda_files = os.path.exists(self.get_setting("technology.sky130.sky130_nda"))
+        self.use_sram22 = os.path.exists(self.get_setting("technology.sky130.sram22_sky130_macros"))
+        self.setup_cdl()
+        self.setup_verilog()
+        self.setup_techlef()
+        self.setup_lvs_deck()
+        self.setup_io_lefs()
+        print('Loaded Sky130 Tech')
+>>>>>>> rohan/stac-tapeout
 
     def gen_config(self) -> None:
         """Generate the tech config, based on the library type selected"""
@@ -749,6 +763,36 @@ class SKY130Tech(HammerTechnology):
         # hooks['genus'].append(HammerTool.make_removal_hook("add_tieoffs"))
         return hooks.get(tool_name, [])
 
+    # Power pins for clamps must be CLASS CORE
+    def setup_io_lefs(self) -> None:
+        sky130A_path = Path(self.get_setting('technology.sky130.sky130A'))
+        source_path = sky130A_path / 'libs.ref' / 'sky130_fd_io' / 'lef' / 'sky130_ef_io.lef'
+        if not source_path.exists():
+            raise FileNotFoundError(f"IO LEF not found: {source_path}")
+
+        cache_tech_dir_path = Path(self.cache_dir)
+        os.makedirs(cache_tech_dir_path, exist_ok=True)
+        dest_path = cache_tech_dir_path / 'sky130_ef_io.lef'
+
+        with open(source_path, 'r') as sf:
+            with open(dest_path, 'w') as df:
+                self.logger.info("Modifying IO LEF: {} -> {}".format
+                    (source_path, dest_path))
+                sl = sf.readlines()
+                for net in ['VCCD1', 'VSSD1']:
+                    start = [idx for idx,line in enumerate(sl) if 'PIN ' + net in line]
+                    end = [idx for idx,line in enumerate(sl) if 'END ' + net in line]
+                    intervals = zip(start, end)
+                    for intv in intervals:
+                        port_idx = [idx for idx,line in enumerate(sl[intv[0]:intv[1]]) if 'PORT' in line]
+                        for idx in port_idx:
+                            sl[intv[0]+idx]=sl[intv[0]+idx].replace('PORT', 'PORT\n      CLASS CORE ;')
+                # force class to spacer
+                # TODO: the disconnect_* slices are also broken like this, but we're not using them
+                start = [idx for idx, line in enumerate(sl) if 'MACRO sky130_ef_io__connect_vcchib_vccd_and_vswitch_vddio_slice_20um' in line]
+                sl[start[0] + 1] = sl[start[0] + 1].replace('AREAIO', 'SPACER')
+                df.writelines(sl)
+
     def get_tech_par_hooks(self, tool_name: str) -> List[HammerToolHookAction]:
         hooks = {
             "innovus": [
@@ -1003,7 +1047,10 @@ add_endcaps
     )
     return True
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> rohan/stac-tapeout
 def efabless_ring_io(ht: HammerTool) -> bool:
     assert isinstance(ht, HammerPlaceAndRouteTool), "IO ring instantiation only for par"
     assert isinstance(ht, TCLTool), "IO ring instantiation can only run on TCL tools"
@@ -1011,6 +1058,7 @@ def efabless_ring_io(ht: HammerTool) -> bool:
     ht.append(f"read_io_file {io_file} -no_die_size_adjust")
     p_nets = list(map(lambda s: s.name, ht.get_independent_power_nets()))
     g_nets = list(map(lambda s: s.name, ht.get_independent_ground_nets()))
+<<<<<<< HEAD
     ht.append(
         f"""
 # Global net connections
@@ -1123,6 +1171,39 @@ add_stripes -create_pins 1 -block_ring_bottom_layer_limit met5 -block_ring_top_l
 
 
 def calibre_drc_blackbox_srams(ht: HammerTool) -> bool:
+=======
+    ht.append(f'''
+        # Global net connections
+        connect_global_net VDDA -type pg_pin -pin_base_name VDDA -verbose
+        connect_global_net VDDIO -type pg_pin -pin_base_name VDDIO* -verbose
+        connect_global_net {p_nets[0]} -type pg_pin -pin_base_name VCCD* -verbose
+        connect_global_net {p_nets[0]} -type pg_pin -pin_base_name VCCHIB -verbose
+        connect_global_net {p_nets[0]} -type pg_pin -pin_base_name VSWITCH -verbose
+        connect_global_net {g_nets[0]} -type pg_pin -pin_base_name VSSA -verbose
+        connect_global_net {g_nets[0]} -type pg_pin -pin_base_name VSSIO* -verbose
+        connect_global_net {g_nets[0]} -type pg_pin -pin_base_name VSSD* -verbose
+    ''')
+    ht.append('''
+        # IO fillers
+        set io_fillers {sky130_ef_io__com_bus_slice_20um sky130_ef_io__com_bus_slice_10um sky130_ef_io__com_bus_slice_5um sky130_ef_io__com_bus_slice_1um}
+        add_io_fillers -io_ring 1 -cells $io_fillers -side top -filler_orient r0
+        add_io_fillers -io_ring 1 -cells $io_fillers -side right -filler_orient r270
+        add_io_fillers -io_ring 1 -cells $io_fillers -side bottom -filler_orient r180
+        add_io_fillers -io_ring 1 -cells $io_fillers -side left -filler_orient r90
+    ''')
+    ht.append(f'''
+        # Core ring
+        add_rings -follow io -layer met5 -nets {{ {p_nets[0]} {g_nets[0]} }} -offset 5 -width 13 -spacing 3
+        route_special -connect pad_pin -nets {{ {p_nets[0]} {g_nets[0]} }} -detailed_log
+    ''')
+    ht.append('''
+        # Prevent buffering on TIE_LO_ESD and TIE_HI_ESD
+        set_dont_touch [get_db [get_db pins -if {.name == *TIE*ESD}] .net]
+    ''')
+    return True
+
+def drc_blackbox_srams(ht: HammerTool) -> bool:
+>>>>>>> rohan/stac-tapeout
     assert isinstance(ht, HammerDRCTool), "Exlude SRAMs only in DRC"
     drc_box = ""
     for name in SKY130Tech.sky130_sram_names():
