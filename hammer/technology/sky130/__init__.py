@@ -31,20 +31,6 @@ class SKY130Tech(HammerTechnology):
     Override the HammerTechnology used in `hammer_tech.py`
     This class is loaded by function `load_from_json`, and will pass the `try` in `importlib`.
     """
-<<<<<<< HEAD
-=======
-    def post_install_script(self) -> None:
-        self.library_name = 'sky130_fd_sc_hd'
-        # check whether variables were overriden to point to a valid path
-        self.use_nda_files = os.path.exists(self.get_setting("technology.sky130.sky130_nda"))
-        self.use_sram22 = os.path.exists(self.get_setting("technology.sky130.sram22_sky130_macros"))
-        self.setup_cdl()
-        self.setup_verilog()
-        self.setup_techlef()
-        self.setup_lvs_deck()
-        self.setup_io_lefs()
-        print('Loaded Sky130 Tech')
->>>>>>> rohan/stac-tapeout
 
     def gen_config(self) -> None:
         """Generate the tech config, based on the library type selected"""
@@ -515,6 +501,8 @@ class SKY130Tech(HammerTechnology):
             self.setup_cdl()
             # self.setup_verilog()
         self.setup_techlef()
+        #self.setup_calibre_lvs_deck()
+        self.setup_io_lefs()
         self.logger.info("Loaded Sky130 Tech")
 
     def setup_cdl(self) -> None:
@@ -715,7 +703,7 @@ class SKY130Tech(HammerTechnology):
                     df.write(line)
                     if self.get_setting("technology.sky130.stdcell_library") == "sky130_scl":
                         if line.strip() == "END poly":
-                            df.write(_the_tlef_edit + _additional_tlef_edit_for_scl)
+                            df.write(_additional_tlef_edit_for_scl + _the_tlef_edit )
                     else:
                         if line.strip() == "END pwell":
                             df.write(_the_tlef_edit)
@@ -922,7 +910,7 @@ LAYER licon
   TYPE CUT ;
 END licon
 """
-_additional_tlef_edit_for_scl = """"
+_additional_tlef_edit_for_scl = """
 LAYER nwell
   TYPE MASTERSLICE ;
 END nwell
@@ -1047,10 +1035,7 @@ add_endcaps
     )
     return True
 
-<<<<<<< HEAD
 
-=======
->>>>>>> rohan/stac-tapeout
 def efabless_ring_io(ht: HammerTool) -> bool:
     assert isinstance(ht, HammerPlaceAndRouteTool), "IO ring instantiation only for par"
     assert isinstance(ht, TCLTool), "IO ring instantiation can only run on TCL tools"
@@ -1058,7 +1043,6 @@ def efabless_ring_io(ht: HammerTool) -> bool:
     ht.append(f"read_io_file {io_file} -no_die_size_adjust")
     p_nets = list(map(lambda s: s.name, ht.get_independent_power_nets()))
     g_nets = list(map(lambda s: s.name, ht.get_independent_ground_nets()))
-<<<<<<< HEAD
     ht.append(
         f"""
 # Global net connections
@@ -1171,7 +1155,6 @@ add_stripes -create_pins 1 -block_ring_bottom_layer_limit met5 -block_ring_top_l
 
 
 def calibre_drc_blackbox_srams(ht: HammerTool) -> bool:
-=======
     ht.append(f'''
         # Global net connections
         connect_global_net VDDA -type pg_pin -pin_base_name VDDA -verbose
@@ -1203,7 +1186,6 @@ def calibre_drc_blackbox_srams(ht: HammerTool) -> bool:
     return True
 
 def drc_blackbox_srams(ht: HammerTool) -> bool:
->>>>>>> rohan/stac-tapeout
     assert isinstance(ht, HammerDRCTool), "Exlude SRAMs only in DRC"
     drc_box = ""
     for name in SKY130Tech.sky130_sram_names():
@@ -1211,7 +1193,7 @@ def drc_blackbox_srams(ht: HammerTool) -> bool:
     run_file = ht.drc_run_file  # type: ignore
     with open(run_file, "a") as f:
         f.write(drc_box)
-    return True
+    return true
 
 
 def pegasus_drc_blackbox_srams(ht: HammerTool) -> bool:
@@ -1306,36 +1288,6 @@ LVS FILTER D  OPEN  LAYOUT
 """
 
 
-def setup_calibre_lvs_deck(ht: HammerTool) -> bool:
-    assert isinstance(ht, HammerLVSTool), "Modify Calibre LVS deck for LVS only"
-    # Remove conflicting specification statements found in PDK LVS decks
-    pattern = ".*({}).*\n".format("|".join(LVS_DECK_SCRUB_LINES))
-    matcher = re.compile(pattern)
-
-    source_paths = ht.get_setting("technology.sky130.lvs_deck_sources")
-    lvs_decks = ht.technology.config.lvs_decks
-    if not lvs_decks:
-        return True
-    for i, deck in enumerate(lvs_decks):
-        if deck.tool_name != "calibre":
-            continue
-        try:
-            source_path = Path(source_paths[i])
-        except IndexError:
-            ht.logger.error("No corresponding source for LVS deck {}".format(deck))
-            continue
-        if not source_path.exists():
-            raise FileNotFoundError(f"LVS deck not found: {source_path}")
-        dest_path = deck.path
-        ht.technology.ensure_dirs_exist(dest_path)
-        with open(source_path, "r") as sf:
-            with open(dest_path, "w") as df:
-                ht.logger.info(
-                    "Modifying LVS deck: {} -> {}".format(source_path, dest_path)
-                )
-                df.write(matcher.sub("", sf.read()))
-                df.write(LVS_DECK_INSERT_LINES)
-    return True
 
 
 tech = SKY130Tech()
