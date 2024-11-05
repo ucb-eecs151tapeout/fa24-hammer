@@ -125,6 +125,7 @@ class SKY130Tech(HammerTechnology):
                     lef_file = os.path.join(
                         SKY130A, "libs.ref", library, "lef", "sky130_ef_io.lef"
                     )
+                    lef_file = "cache/sky130_ef_io.lef"
                     if self.get_setting("vlsi.core.lvs_tool")   == "hammer.lvs.pegasus" and slib == "sky130_scl":
                         spice_file = None
                     else:
@@ -135,6 +136,7 @@ class SKY130Tech(HammerTechnology):
                     lef_file = os.path.join(
                         SKY130A, "libs.ref", library, "lef", "sky130_ef_io.lef"
                     )
+                    lef_file = "cache/sky130_ef_io.lef"
                     if self.get_setting("vlsi.core.lvs_tool")   == "hammer.lvs.pegasus" and slib == "sky130_scl":
                         spice_file = None
                     else:
@@ -158,7 +160,8 @@ class SKY130Tech(HammerTechnology):
                     verilog_sim=os.path.join(SKYWATER_LIBS, "verilog", file_lib + ".v"),
                     lef_file=lef_file,
                     spice_file=spice_file,
-                    gds_file=os.path.join(SKYWATER_LIBS, "gds", gds_file),
+		# TODO ELAM MAKE THIS MORE ROBUST
+                    gds_file=os.path.join(SKYWATER_LIBS, "gds", gds_file) if gds_file != "sky130_ef_io.gds" else "/scratch/ee198-20-tab/sky130_ef_io_with_overlay.gds",
                     corner=Corner(nmos=speed, pmos=speed, temperature=temp),
                     supplies=Supplies(VDD=vdd, GND="0 V"),
                     provides=[Provide(lib_type=cell_name, vt="RVT")],
