@@ -351,6 +351,8 @@ class SKY130Tech(HammerTechnology):
 
         elif slib == "sky130_scl":
 
+            phys_only = [f"FILL{i**2}" for i in range(7)]
+
             # The cadence PDK (as of version 0.0.3) doesn't seem to have tap nor decap cells, so par won't run (and if we forced it to, lvs would fail)
             spcl_cells = [
                 SpecialCell(
@@ -379,6 +381,9 @@ class SKY130Tech(HammerTechnology):
             lib_corner_files = os.listdir(LIBRARY_PATH)
             lib_corner_files.sort()
             for cornerfilename in lib_corner_files:
+                if "#" in cornerfilename: # ??? what are these random files in sky130_scl_v0.0.6 downloaded 11/4 off david'd FTP (they're the same name as the other ndlm but have pound signs prefixed and suffixed and they break in parsing due to invalid voltage value? is this a swap file from some editor?
+
+                    continue
                 if not (
                     "sky130" in cornerfilename
                 ):  # cadence doesn't use the lib name in their corner libs
@@ -973,9 +978,9 @@ set_db opt_hold_target_slack 0.10
 ##########################################################
 #-------------------------------------------------------------------------------
 puts "WARNING ELAM ELAM ELAM REMOVING ANTENNA DIODES FOR NOW BC THEY BREAK LVS and ARE NOT DRC CLEAN WITH CADENCE STDCELLS REMOVE MEEEEE"
-set_db route_design_antenna_diode_insertion 0
-#set_db route_design_antenna_diode_insertion 1
-#set_db route_design_antenna_cell_name "{"sky130_fd_sc_hd__diode_2" if ht.get_setting("technology.sky130.stdcell_library") == "sky130_fd_sc_hd" else "ANTENNA"}"
+#set_db route_design_antenna_diode_insertion 0
+set_db route_design_antenna_diode_insertion 1
+set_db route_design_antenna_cell_name "{"sky130_fd_sc_hd__diode_2" if ht.get_setting("technology.sky130.stdcell_library") == "sky130_fd_sc_hd" else "ANTENNA"}"
 
 set_db route_design_high_freq_search_repair true
 set_db route_design_detail_post_route_spread_wire true
